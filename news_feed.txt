@@ -11,3 +11,16 @@ City: Berlin
 Temperature: 14°C
 Reported at: 2025-10-20 21:24
 
+News -------------------------
+Some news text here
+London, 2025-10-23 11:05
+
+Private Ad ------------------
+Buy my bike!
+Actual until: 2025-12-01, 38 days left
+
+Weather Report --------------
+City: Paris
+Temperature: 18°C
+Reported at: 2025-10-23 11:05
+

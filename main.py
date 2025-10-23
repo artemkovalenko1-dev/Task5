@@ -1,4 +1,5 @@
 import datetime
+import os
 
 class Record:
     def format(self):
@@ -31,6 +32,56 @@ class WeatherReport(Record):  # Unique type
     def format(self):
         return f"Weather Report --------------\nCity: {self.city}\nTemperature: {self.temperature}°C\nReported at: {self.date}\n"
 
+class FileRecordImporter:
+    """
+    Input format example (records separated by blank lines):
+
+    News
+    Some news text here
+    London
+
+    PrivateAd
+    Buy my bike!
+    2025-12-01
+
+    WeatherReport
+    Paris
+    18
+    """
+    def __init__(self, filepath):
+        self.filepath = filepath
+
+    def parse_records(self):
+        with open(self.filepath, "r") as f:
+            content = f.read().strip()
+        raw_records = content.split('\n\n')
+        records = []
+        for raw in raw_records:
+            lines = [line.strip() for line in raw.split('\n') if line.strip()]
+            if not lines:
+                continue
+            record_type = lines[0]
+            try:
+                if record_type == "News" and len(lines) >= 3:
+                    records.append(News(lines[1], lines[2]))
+                elif record_type == "PrivateAd" and len(lines) >= 3:
+                    records.append(PrivateAd(lines[1], lines[2]))
+                elif record_type == "WeatherReport" and len(lines) >= 3:
+                    records.append(WeatherReport(lines[1], lines[2]))
+                else:
+                    print(f"Skipped invalid record: {raw}")
+            except Exception as e:
+                print(f"Error parsing record: {raw}\nError: {e}")
+        return records
+
+    def import_to_feed(self, news_feed):
+        records = self.parse_records()
+        for record in records:
+            news_feed.add_record(record)
+        # Remove file after successful import
+        os.remove(self.filepath)
+        print(f"File '{self.filepath}' processed and removed.")
+
 class NewsFeed:
     def __init__(self, filename="news_feed.txt"):
         self.filename = filename
@@ -46,29 +97,39 @@ class NewsFeed:
             print("1. News")
             print("2. Private Ad")
             print("3. Weather Report")
-            print("4. Exit")
-            choice = input("Enter choice (1-4): ")
+            print("4. Import from file")
+            print("5. Exit")
+            choice = input("Enter choice (1-5): ")
 
             if choice == "1":
                 text = input("Enter news text: ")
                 city = input("Enter city: ")
                 record = News(text, city)
+                self.add_record(record)
             elif choice == "2":
                 text = input("Enter ad text: ")
                 expiration_date = input("Enter expiration date (YYYY-MM-DD): ")
                 record = PrivateAd(text, expiration_date)
+                self.add_record(record)
             elif choice == "3":
                 city = input("Enter city: ")
                 temperature = input("Enter temperature (°C): ")
                 record = WeatherReport(city, temperature)
+                self.add_record(record)
             elif choice == "4":
+                path = input("Enter file path (leave blank for 'input.txt' in current folder): ").strip()
+                if not path:
+                    path = "input.txt"
+                if os.path.exists(path):
+                    importer = FileRecordImporter(path)
+                    importer.import_to_feed(self)
+                else:
+                    print(f"File '{path}' not found.")
+            elif choice == "5":
                 print("Exiting.")
                 break
             else:
                 print("Invalid choice. Try again.")
-                continue
-
-            self.add_record(record)
 
 if __name__ == "__main__":
     feed = NewsFeed()
