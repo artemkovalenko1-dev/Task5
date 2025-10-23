@@ -190,7 +190,7 @@ class NewsFeed:
             print("\nSelect record type to add:")
             print("1. News")
             print("2. Private Ad")
-            print("3. Weather Report (unique)")
+            print("3. Weather Report")
             print("4. Import from file")
             print("5. Exit")
             choice = input("Enter choice (1-5): ")
