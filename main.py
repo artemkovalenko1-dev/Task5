@@ -1,107 +1,64 @@
 import datetime
 import os
+import csv
+import string
+from collections import Counter
 
 class Record:
-    """
-    Abstract base class for all record types.
-
-    Methods:
-        format(): Returns a formatted string representation of the record.
-    """
+    """Abstract base class for all record types."""
     def format(self):
-        """
-        Returns a formatted string representation of the record.
-
-        Raises:
-            NotImplementedError: If not implemented in subclass.
-        """
+        """Returns a formatted string representation of the record."""
         raise NotImplementedError("Subclasses must implement format method.")
 
 class News(Record):
-    """
-    Represents a news record with text, city, and publish date.
-
-    Args:
-        text (str): The news content.
-        city (str): The city where the news is relevant.
-
-    Attributes:
-        text (str): News content.
-        city (str): City name.
-        date (str): Publish date and time.
-    """
+    """Represents a news record with text, city, and publish date."""
     def __init__(self, text, city):
         self.text = text
         self.city = city
         self.date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
 
     def format(self):
-        """
-        Returns:
-            str: Formatted news record.
-        """
+        """Returns formatted news record."""
         return f"News -------------------------\n{self.text}\n{self.city}, {self.date}\n"
 
 class PrivateAd(Record):
-    """
-    Represents a private ad with text, expiration date, and days left.
-
-    Args:
-        text (str): The ad content.
-        expiration_date_str (str): Expiration date in 'YYYY-MM-DD' format.
-
-    Attributes:
-        text (str): Ad content.
-        expiration_date (datetime): Expiration date.
-        days_left (int): Days left until expiration.
-    """
+    """Represents a private ad with text, expiration date, and days left."""
     def __init__(self, text, expiration_date_str):
         self.text = text
         self.expiration_date = datetime.datetime.strptime(expiration_date_str, "%Y-%m-%d")
         self.days_left = (self.expiration_date - datetime.datetime.now()).days
 
     def format(self):
-        """
-        Returns:
-            str: Formatted private ad record.
-        """
+        """Returns formatted private ad record."""
         return f"Private Ad ------------------\n{self.text}\nActual until: {self.expiration_date.strftime('%Y-%m-%d')}, {self.days_left} days left\n"
 
 class WeatherReport(Record):
-    """
-    Represents a weather report with city, temperature, and report date.
-
-    Args:
-        city (str): City name.
-        temperature (str): Temperature in Celsius.
-
-    Attributes:
-        city (str): City name.
-        temperature (str): Temperature value.
-        date (str): Report date and time.
-    """
+    """Represents a weather report with city, temperature, and report date."""
     def __init__(self, city, temperature):
         self.city = city
         self.temperature = temperature
         self.date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
 
     def format(self):
-        """
-        Returns:
-            str: Formatted weather report record.
-        """
+        """Returns formatted weather report record."""
         return f"Weather Report --------------\nCity: {self.city}\nTemperature: {self.temperature}°C\nReported at: {self.date}\n"
 
 class FileRecordImporter:
     """
     Imports records from a text file and adds them to a NewsFeed.
+    Input format example (records separated by blank lines):
 
-    Args:
-        filepath (str): Path to the input file.
+    News
+    Some news text here
+    London
 
-    Methods:
-        parse_records(): Parses records from the file and returns a list of Record objects.
-        import_to_feed(news_feed): Adds parsed records to the NewsFeed and removes the file.
+    PrivateAd
+    Buy my bike!
+    2025-12-01
+
+    WeatherReport
+    Paris
+    18
     """
     def __init__(self, filepath):
         self.filepath = filepath
@@ -141,9 +98,6 @@ class FileRecordImporter:
 
         Args:
             news_feed (NewsFeed): The NewsFeed instance to add records to.
-
-        Returns:
-            None
         """
         records = self.parse_records()
         for record in records:
@@ -157,34 +111,56 @@ class NewsFeed:
 
     Args:
         filename (str): Path to the output file (default 'news_feed.txt').
-
-    Methods:
-        add_record(record): Appends a formatted record to the output file.
-        run(): Main loop for user interaction.
     """
     def __init__(self, filename="news_feed.txt"):
         self.filename = filename
 
     def add_record(self, record: Record):
         """
-        Appends a formatted record to the output file.
+        Appends a formatted record to the output file and updates CSVs.
 
         Args:
             record (Record): The record to add.
-
-        Returns:
-            None
         """
         with open(self.filename, "a") as f:
             f.write(record.format() + "\n")
         print("Record published!\n")
+        self.update_statistics()
+
+    def update_statistics(self):
+        """
+        Calculates word and letter statistics from the output file and recreates CSVs.
+        """
+        with open(self.filename, "r") as f:
+            text = f.read()
+
+        # --- Word count CSV ---
+        words = [word.strip(string.punctuation).lower() for word in text.split()]
+        word_counts = Counter(filter(None, words))
+        with open("word_count.csv", "w", newline='', encoding='utf-8') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(["word", "count"])
+            for word, count in sorted(word_counts.items()):
+                writer.writerow([word, count])
+
+        # --- Letter count CSV ---
+        letters = [ch for ch in text if ch.isalpha()]
+        total_letters = len(letters)
+        letter_counts = Counter(ch.lower() for ch in letters)
+        uppercase_counts = Counter(ch for ch in text if ch.isalpha() and ch.isupper())
+
+        with open("letter_count.csv", "w", newline='', encoding='utf-8') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(["letter", "count_all", "count_uppercase", "percentage"])
+            for letter in sorted(letter_counts):
+                count_all = letter_counts[letter]
+                count_upper = uppercase_counts.get(letter.upper(), 0)
+                percentage = round((count_all / total_letters) * 100, 2) if total_letters else 0
+                writer.writerow([letter, count_all, count_upper, percentage])
 
     def run(self):
         """
         Main loop for user interaction. Allows adding records manually or via file import.
-
-        Returns:
-            None
         """
         while True:
             print("\nSelect record type to add:")
