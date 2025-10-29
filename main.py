@@ -2,12 +2,12 @@ import datetime
 import os
 import csv
 import string
+import json
 from collections import Counter
 
 class Record:
     """Abstract base class for all record types."""
     def format(self):
-        """Returns a formatted string representation of the record."""
         raise NotImplementedError("Subclasses must implement format method.")
 
 class News(Record):
@@ -18,7 +18,6 @@ class News(Record):
         self.date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
 
     def format(self):
-        """Returns formatted news record."""
         return f"News -------------------------\n{self.text}\n{self.city}, {self.date}\n"
 
 class PrivateAd(Record):
@@ -29,7 +28,6 @@ class PrivateAd(Record):
         self.days_left = (self.expiration_date - datetime.datetime.now()).days
 
     def format(self):
-        """Returns formatted private ad record."""
         return f"Private Ad ------------------\n{self.text}\nActual until: {self.expiration_date.strftime('%Y-%m-%d')}, {self.days_left} days left\n"
 
 class WeatherReport(Record):
@@ -40,7 +38,6 @@ class WeatherReport(Record):
         self.date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
 
     def format(self):
-        """Returns formatted weather report record."""
         return f"Weather Report --------------\nCity: {self.city}\nTemperature: {self.temperature}°C\nReported at: {self.date}\n"
 
 class FileRecordImporter:
@@ -64,12 +61,6 @@ class FileRecordImporter:
         self.filepath = filepath
 
     def parse_records(self):
-        """
-        Parses records from the input file.
-
-        Returns:
-            list: List of Record objects (News, PrivateAd, WeatherReport).
-        """
         with open(self.filepath, "r") as f:
             content = f.read().strip()
         raw_records = content.split('\n\n')
@@ -93,12 +84,58 @@ class FileRecordImporter:
         return records
 
     def import_to_feed(self, news_feed):
-        """
-        Adds parsed records to the NewsFeed and removes the file.
+        records = self.parse_records()
+        for record in records:
+            news_feed.add_record(record)
+        os.remove(self.filepath)
+        print(f"File '{self.filepath}' processed and removed.")
 
-        Args:
-            news_feed (NewsFeed): The NewsFeed instance to add records to.
-        """
+class JSONRecordImporter:
+    """
+    Imports records from a JSON file and adds them to a NewsFeed.
+
+    JSON input format:
+    [
+        {
+            "type": "News",
+            "text": "Some news text",
+            "city": "London"
+        },
+        {
+            "type": "PrivateAd",
+            "text": "Ad text",
+            "expiration_date": "2025-12-01"
+        },
+        {
+            "type": "WeatherReport",
+            "city": "Paris",
+            "temperature": "18"
+        }
+    ]
+    """
+    def __init__(self, filepath):
+        self.filepath = filepath
+
+    def parse_records(self):
+        with open(self.filepath, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        records = []
+        for item in data:
+            try:
+                record_type = item.get("type")
+                if record_type == "News":
+                    records.append(News(item["text"], item["city"]))
+                elif record_type == "PrivateAd":
+                    records.append(PrivateAd(item["text"], item["expiration_date"]))
+                elif record_type == "WeatherReport":
+                    records.append(WeatherReport(item["city"], item["temperature"]))
+                else:
+                    print(f"Skipped invalid record: {item}")
+            except Exception as e:
+                print(f"Error parsing record: {item}\nError: {e}")
+        return records
+
+    def import_to_feed(self, news_feed):
         records = self.parse_records()
         for record in records:
             news_feed.add_record(record)
@@ -167,9 +204,10 @@ class NewsFeed:
             print("1. News")
             print("2. Private Ad")
             print("3. Weather Report")
-            print("4. Import from file")
-            print("5. Exit")
-            choice = input("Enter choice (1-5): ")
+            print("4. Import from text file")
+            print("5. Import from JSON file")
+            print("6. Exit")
+            choice = input("Enter choice (1-6): ")
 
             if choice == "1":
                 text = input("Enter news text: ")
@@ -196,6 +234,15 @@ class NewsFeed:
                 else:
                     print(f"File '{path}' not found.")
             elif choice == "5":
+                path = input("Enter JSON file path (leave blank for 'input.json' in current folder): ").strip()
+                if not path:
+                    path = "input.json"
+                if os.path.exists(path):
+                    importer = JSONRecordImporter(path)
+                    importer.import_to_feed(self)
+                else:
+                    print(f"File '{path}' not found.")
+            elif choice == "6":
                 print("Exiting.")
                 break
             else:

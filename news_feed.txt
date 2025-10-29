@@ -28,3 +28,16 @@ News -------------------------
 Test news
 Test city, 2025-10-27 09:36
 
+News -------------------------
+New library opened downtown.
+Springfield, 2025-10-29 16:57
+
+Private Ad ------------------
+Selling a used laptop.
+Actual until: 2025-12-31, 62 days left
+
+Weather Report --------------
+City: Berlin
+Temperature: 15°C
+Reported at: 2025-10-29 16:57
+
