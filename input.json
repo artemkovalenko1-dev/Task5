@@ -1,0 +1,17 @@
+[
+    {
+        "type": "News",
+        "text": "New library opened downtown.",
+        "city": "Springfield"
+    },
+    {
+        "type": "PrivateAd",
+        "text": "Selling a used laptop.",
+        "expiration_date": "2025-12-31"
+    },
+    {
+        "type": "WeatherReport",
+        "city": "Berlin",
+        "temperature": "15"
+    }
+]
