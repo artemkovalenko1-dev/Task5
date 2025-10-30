@@ -41,3 +41,16 @@ City: Berlin
 Temperature: 15°C
 Reported at: 2025-10-29 16:57
 
+News -------------------------
+City marathon will take place this Sunday.
+Boston, 2025-10-30 11:53
+
+Private Ad ------------------
+Looking for a roommate.
+Actual until: 2025-11-30, 30 days left
+
+Weather Report --------------
+City: Madrid
+Temperature: 22°C
+Reported at: 2025-10-30 11:53
+

@@ -1,0 +1,14 @@
+<records>
+    <record type="News">
+        <text>City marathon will take place this Sunday.</text>
+        <city>Boston</city>
+    </record>
+    <record type="PrivateAd">
+        <text>Looking for a roommate.</text>
+        <expiration_date>2025-11-30</expiration_date>
+    </record>
+    <record type="WeatherReport">
+        <city>Madrid</city>
+        <temperature>22</temperature>
+    </record>
+</records>

@@ -3,6 +3,7 @@ import os
 import csv
 import string
 import json
+import xml.etree.ElementTree as ET
 from collections import Counter
 
 class Record:
@@ -142,6 +143,61 @@ class JSONRecordImporter:
         os.remove(self.filepath)
         print(f"File '{self.filepath}' processed and removed.")
 
+class XMLRecordImporter:
+    """
+    Imports records from an XML file and adds them to a NewsFeed.
+
+    XML input format:
+    <records>
+        <record type="News">
+            <text>Some news text</text>
+            <city>London</city>
+        </record>
+        <record type="PrivateAd">
+            <text>Ad text</text>
+            <expiration_date>2025-12-01</expiration_date>
+        </record>
+        <record type="WeatherReport">
+            <city>Paris</city>
+            <temperature>18</temperature>
+        </record>
+    </records>
+    """
+    def __init__(self, filepath):
+        self.filepath = filepath
+
+    def parse_records(self):
+        tree = ET.parse(self.filepath)
+        root = tree.getroot()
+        records = []
+        for rec in root.findall('record'):
+            record_type = rec.attrib.get('type')
+            try:
+                if record_type == "News":
+                    text = rec.find('text').text
+                    city = rec.find('city').text
+                    records.append(News(text, city))
+                elif record_type == "PrivateAd":
+                    text = rec.find('text').text
+                    expiration_date = rec.find('expiration_date').text
+                    records.append(PrivateAd(text, expiration_date))
+                elif record_type == "WeatherReport":
+                    city = rec.find('city').text
+                    temperature = rec.find('temperature').text
+                    records.append(WeatherReport(city, temperature))
+                else:
+                    print(f"Skipped invalid record: {ET.tostring(rec, encoding='unicode')}")
+            except Exception as e:
+                print(f"Error parsing record: {ET.tostring(rec, encoding='unicode')}\nError: {e}")
+        return records
+
+    def import_to_feed(self, news_feed):
+        records = self.parse_records()
+        for record in records:
+            news_feed.add_record(record)
+        os.remove(self.filepath)
+        print(f"File '{self.filepath}' processed and removed.")
+
 class NewsFeed:
     """
     Manages the news feed, allowing manual and file-based record addition.
@@ -206,8 +262,9 @@ class NewsFeed:
             print("3. Weather Report")
             print("4. Import from text file")
             print("5. Import from JSON file")
-            print("6. Exit")
-            choice = input("Enter choice (1-6): ")
+            print("6. Import from XML file")
+            print("7. Exit")
+            choice = input("Enter choice (1-7): ")
 
             if choice == "1":
                 text = input("Enter news text: ")
@@ -243,6 +300,15 @@ class NewsFeed:
                 else:
                     print(f"File '{path}' not found.")
             elif choice == "6":
+                path = input("Enter XML file path (leave blank for 'input.xml' in current folder): ").strip()
+                if not path:
+                    path = "input.xml"
+                if os.path.exists(path):
+                    importer = XMLRecordImporter(path)
+                    importer.import_to_feed(self)
+                else:
+                    print(f"File '{path}' not found.")
+            elif choice == "7":
                 print("Exiting.")
                 break
             else:
