@@ -5,6 +5,7 @@ import string
 import json
 import xml.etree.ElementTree as ET
 from collections import Counter
+import sqlite3
 
 class Record:
     """Abstract base class for all record types."""
@@ -198,6 +199,127 @@ class XMLRecordImporter:
         os.remove(self.filepath)
         print(f"File '{self.filepath}' processed and removed.")
 
+class DatabaseSaver:
+    """
+    Handles saving records into an SQLite3 database.
+    Each record type has its own table.
+    Prevents duplicate records.
+    """
+    def __init__(self, db_path="records.db"):
+        self.db_path = db_path
+        self.conn = sqlite3.connect(self.db_path)
+        self.create_tables()
+
+    def create_tables(self):
+        """Creates tables for each record type if they do not exist."""
+        cur = self.conn.cursor()
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS news (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                text TEXT,
+                city TEXT,
+                date TEXT,
+                UNIQUE(text, city, date)
+            )
+        """)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS private_ads (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                text TEXT,
+                expiration_date TEXT,
+                days_left INTEGER,
+                UNIQUE(text, expiration_date)
+            )
+        """)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS weather_reports (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                city TEXT,
+                temperature TEXT,
+                date TEXT,
+                UNIQUE(city, temperature, date)
+            )
+        """)
+        self.conn.commit()
+
+    def save_news(self, news_record):
+        """
+        Saves a News record to the database if not duplicate.
+        Args:
+            news_record (News): News record instance.
+        Returns:
+            bool: True if inserted, False if duplicate.
+        """
+        cur = self.conn.cursor()
+        try:
+            cur.execute(
+                "INSERT INTO news (text, city, date) VALUES (?, ?, ?)",
+                (news_record.text, news_record.city, news_record.date)
+            )
+            self.conn.commit()
+            return True
+        except sqlite3.IntegrityError:
+            return False
+
+    def save_private_ad(self, ad_record):
+        """
+        Saves a PrivateAd record to the database if not duplicate.
+        Args:
+            ad_record (PrivateAd): PrivateAd record instance.
+        Returns:
+            bool: True if inserted, False if duplicate.
+        """
+        cur = self.conn.cursor()
+        try:
+            cur.execute(
+                "INSERT INTO private_ads (text, expiration_date, days_left) VALUES (?, ?, ?)",
+                (ad_record.text, ad_record.expiration_date.strftime("%Y-%m-%d"), ad_record.days_left)
+            )
+            self.conn.commit()
+            return True
+        except sqlite3.IntegrityError:
+            return False
+
+    def save_weather_report(self, weather_record):
+        """
+        Saves a WeatherReport record to the database if not duplicate.
+        Args:
+            weather_record (WeatherReport): WeatherReport record instance.
+        Returns:
+            bool: True if inserted, False if duplicate.
+        """
+        cur = self.conn.cursor()
+        try:
+            cur.execute(
+                "INSERT INTO weather_reports (city, temperature, date) VALUES (?, ?, ?)",
+                (weather_record.city, weather_record.temperature, weather_record.date)
+            )
+            self.conn.commit()
+            return True
+        except sqlite3.IntegrityError:
+            return False
+
+    def save_record(self, record):
+        """
+        Determines record type and saves to the appropriate table.
+        Args:
+            record (Record): News, PrivateAd, or WeatherReport instance.
+        Returns:
+            bool: True if inserted, False if duplicate.
+        """
+        if isinstance(record, News):
+            return self.save_news(record)
+        elif isinstance(record, PrivateAd):
+            return self.save_private_ad(record)
+        elif isinstance(record, WeatherReport):
+            return self.save_weather_report(record)
+        else:
+            raise ValueError("Unknown record type")
+
+    def close(self):
+        """Closes the database connection."""
+        self.conn.close()
+
 class NewsFeed:
     """
     Manages the news feed, allowing manual and file-based record addition.
@@ -207,18 +329,22 @@ class NewsFeed:
     """
     def __init__(self, filename="news_feed.txt"):
         self.filename = filename
+        self.db_saver = DatabaseSaver()
 
-    def add_record(self, record: Record):
+    def add_record(self, record):
         """
-        Appends a formatted record to the output file and updates CSVs.
-
-        Args:
-            record (Record): The record to add.
+        Appends a formatted record to the output file, updates CSVs, and saves to DB.
         """
         with open(self.filename, "a") as f:
             f.write(record.format() + "\n")
         print("Record published!\n")
         self.update_statistics()
+        # Save to database
+        inserted = self.db_saver.save_record(record)
+        if inserted:
+            print("Record saved to database.")
+        else:
+            print("Duplicate record. Not saved to database.")
 
     def update_statistics(self):
         """
@@ -313,6 +439,9 @@ class NewsFeed:
                 break
             else:
                 print("Invalid choice. Try again.")
+
+    def __del__(self):
+        self.db_saver.close()
 
 if __name__ == "__main__":
     feed = NewsFeed()

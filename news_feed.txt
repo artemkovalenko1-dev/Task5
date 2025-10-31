@@ -54,3 +54,12 @@ City: Madrid
 Temperature: 22°C
 Reported at: 2025-10-30 11:53
 
+News -------------------------
+Sql news
+Sql town, 2025-10-31 15:31
+
+Weather Report --------------
+City: Kensington
+Temperature: 10°C
+Reported at: 2025-10-31 15:39
+
